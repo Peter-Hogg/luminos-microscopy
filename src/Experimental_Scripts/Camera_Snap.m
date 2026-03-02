@@ -66,38 +66,38 @@ metadata.roi_width      = cam.ROI(2);
 metadata.roi_height     = cam.ROI(4);
 metadata.image_width    = size(snap.img, 2);
 metadata.image_height   = size(snap.img, 1);
-metadata.exposure_s     = cam.exposureTimeSeconds;
+metadata.exposure_s     = cam.exposuretime;
 metadata.x_world_limits = snap.ref2d.XWorldLimits;
 metadata.y_world_limits = snap.ref2d.YWorldLimits;
 
 % --- Lasers / Light Sources ---
-%lasers = app.getDevice('Light_Source');
-%if ~isempty(lasers)
-%    laser_info = struct();
-%    for i = 1:length(lasers)
-%        entry = struct();
-%        entry.name    = lasers(i).name;
-%        % Try common property names - adjust to match your actual device class
-%        if isprop(lasers(i), 'enabled');  entry.enabled = lasers(i).enabled;   end
-%        if isprop(lasers(i), 'power');    entry.power   = lasers(i).power;     end
-%        if isprop(lasers(i), 'wavelength'); entry.wavelength = lasers(i).wavelength; end
-%        laser_info(i).laser = entry;
-%    end
-%    metadata.lasers = laser_info;
-%end
+lasers = app.getDevice('Modulator_Device');
+if ~isempty(lasers)
+   laser_info = struct();
+   for i = 1:length(lasers)
+       entry = struct();
+       entry.name    = lasers(i).name;
+       % Try common property names - adjust to match your actual device class
+       if isprop(lasers(i), 'min');  entry.enabled = lasers(i).min;   end
+       if isprop(lasers(i), 'max');  entry.enabled = lasers(i).max;   end
+       if isprop(lasers(i), 'power');    entry.power   = lasers(i).level;     end
+       laser_info(i).laser = entry;
+   end
+   metadata.lasers = laser_info;
+end
 
 % --- Shutters ---
-%shutters = app.getDevice('Shutter');
-%if ~isempty(shutters)
-%    shutter_info = struct();
-%    for i = 1:length(shutters)
-%        entry = struct();
-%        entry.name    = shutters(i).name;
-%        if isprop(shutters(i), 'isOpen'); entry.is_open = shutters(i).isOpen; end
-%        shutter_info(i).shutter = entry;
-%    end
-%    metadata.shutters = shutter_info;
-%end
+shutters = app.getDevice('Shutter_Device');
+if ~isempty(shutters)
+   shutter_info = struct();
+   for i = 1:length(shutters)
+       entry = struct();
+       entry.name    = shutters(i).name;
+       if isprop(shutters(i), 'isOpen'); entry.is_open = shutters(i).State; end
+       shutter_info(i).shutter = entry;
+   end
+   metadata.shutters = shutter_info;
+end
 
 % --- Serialize and write TIFF ---
 meta_json = jsonencode(metadata);
