@@ -75,29 +75,17 @@ lasers = app.getDevice('Modulator_Device');
 if ~isempty(lasers)
    laser_info = struct();
    for i = 1:length(lasers)
-       entry = struct();
+       entry         = struct();
        entry.name    = lasers(i).name;
-       % Try common property names - adjust to match your actual device class
-       if isprop(lasers(i), 'min');  entry.enabled = lasers(i).min;   end
-       if isprop(lasers(i), 'max');  entry.enabled = lasers(i).max;   end
-       if isprop(lasers(i), 'power');    entry.power   = lasers(i).level;     end
+       entry.level   = lasers(i).level;      % current output voltage
+       entry.min_V   = lasers(i).min;        % 0
+       entry.max_V   = lasers(i).max;        % 5
+       entry.enabled = lasers(i).level > 0;  % true if any output
        laser_info(i).laser = entry;
    end
    metadata.lasers = laser_info;
 end
 
-% --- Shutters ---
-shutters = app.getDevice('Shutter_Device');
-if ~isempty(shutters)
-   shutter_info = struct();
-   for i = 1:length(shutters)
-       entry = struct();
-       entry.name    = shutters(i).name;
-       if isprop(shutters(i), 'isOpen'); entry.is_open = shutters(i).State; end
-       shutter_info(i).shutter = entry;
-   end
-   metadata.shutters = shutter_info;
-end
 
 % --- Serialize and write TIFF ---
 meta_json = jsonencode(metadata);
