@@ -13,6 +13,7 @@ import {
   getImageHeight,
   getImageTform,
 } from "../matlabComms/dmdComms";
+import { useMatlabVariable } from "../matlabComms/matlabHelpers";
 import { usePolygonMode } from "../components/Patterning/PatterningModes/usePolygonMode";
 import { useCircleMode } from "../components/Patterning/PatterningModes/useCircleMode";
 import { useAdvancedCalibrateMode } from "../components/Patterning/PatterningModes/useAdvancedCalibrateMode";
@@ -44,7 +45,54 @@ const DMDDraw = ({ imgHeight, dmdDeviceName }) => {
   );
 };
 
+const CameraTargetSelector = ({ dmdDeviceName }) => {
+  const [cameraNames] = useMatlabVariable("name", "Camera");
+  const [targetCamera, setTargetCamera] = useMatlabVariable(
+    "target_camera",
+    "DMD",
+    dmdDeviceName
+  );
+
+  const cameraNamesArray = Array.isArray(cameraNames)
+    ? cameraNames
+    : cameraNames
+    ? [cameraNames]
+    : [];
+
+  if (cameraNamesArray.length <= 1) return null;
+
+  return (
+    <div className="flex items-center gap-2 mb-2">
+      <span className="text-xs text-gray-400">Target camera:</span>
+      <select
+        value={targetCamera || ""}
+        onChange={(e) => setTargetCamera(e.target.value)}
+        className="bg-gray-800 text-gray-100 text-xs border border-gray-600 rounded px-2 py-1 outline-none hover:border-gray-400 focus:border-gray-300"
+      >
+        {cameraNamesArray.map((name) => (
+          <option key={name} value={name} className="bg-gray-800">
+            {name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
 const DMDDrawPatterns = ({ dmdDeviceName, ...props }) => {
+  const [targetCamera] = useMatlabVariable(
+    "target_camera",
+    "DMD",
+    dmdDeviceName
+  );
+  const [cameraNames] = useMatlabVariable("name", "Camera");
+  const cameraNamesArray = Array.isArray(cameraNames)
+    ? cameraNames
+    : cameraNames
+    ? [cameraNames]
+    : [];
+  const cameraName = targetCamera || cameraNamesArray[0] || "";
+
   const polygonMode = usePolygonMode();
   const circleMode = useCircleMode({ dmdDeviceName });
   const calibrateMode = useAdvancedCalibrateMode({
@@ -52,6 +100,7 @@ const DMDDrawPatterns = ({ dmdDeviceName, ...props }) => {
     projectCalibrationPattern: projectDMDCalPattern,
     deviceType: "DMD",
     deviceName: dmdDeviceName,
+    cameraName,
   });
   const freeformMode = useFreeformMode();
 
@@ -186,9 +235,11 @@ const DMDDrawPatterns = ({ dmdDeviceName, ...props }) => {
 
   return (
     <div>
+      <CameraTargetSelector dmdDeviceName={dmdDeviceName} />
       <DrawROIs
         deviceType={"DMD"}
         deviceName={dmdDeviceName}
+        cameraName={cameraName}
         allModes={allModes}
         {...props}
       />

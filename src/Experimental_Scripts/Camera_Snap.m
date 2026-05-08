@@ -55,7 +55,52 @@ snapimfile = fullfile(snapfolder, strcat(ds, experimentName, '.tiff'));
 snapdatfile = fullfile(snapfolder, strcat(ds, experimentName, '.mat'));
 pause(.01);
 drawnow;
-imwrite(snap.img, snapimfile);
+% --- Camera ---
+metadata.timestamp      = datestr(snap.timestamp, 'yyyy-mm-dd HH:MM:SS');
+metadata.experiment     = experimentName;
+metadata.camera         = snap.name;
+metadata.binning        = snap.bin;
+metadata.roi_x          = cam.ROI(1);
+metadata.roi_y          = cam.ROI(3);
+metadata.roi_width      = cam.ROI(2);
+metadata.roi_height     = cam.ROI(4);
+metadata.image_width    = size(snap.img, 2);
+metadata.image_height   = size(snap.img, 1);
+metadata.exposure_s     = cam.exposuretime;
+metadata.x_world_limits = snap.ref2d.XWorldLimits;
+metadata.y_world_limits = snap.ref2d.YWorldLimits;
+
+% --- Lasers / Light Sources ---
+lasers = app.getDevice('Modulator_Device');
+if ~isempty(lasers)
+   laser_info = struct();
+   for i = 1:length(lasers)
+       laser_info(i).name    = lasers(i).name;
+       laser_info(i).level   = lasers(i).level;
+       laser_info(i).min_V   = lasers(i).min;
+       laser_info(i).max_V   = lasers(i).max;
+       laser_info(i).enabled = lasers(i).level > 0;
+   end
+   metadata.lasers = laser_info;
+end
+
+
+% --- Serialize and write TIFF ---
+meta_json = jsonencode(metadata);
+
+t = Tiff(snapimfile, 'w');
+tagstruct.ImageLength       = size(snap.img, 1);
+tagstruct.ImageWidth        = size(snap.img, 2);
+tagstruct.Photometric       = Tiff.Photometric.MinIsBlack;
+tagstruct.BitsPerSample     = 16;
+tagstruct.SamplesPerPixel   = 1;
+tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+tagstruct.Compression       = Tiff.Compression.None;
+tagstruct.RowsPerStrip      = size(snap.img, 1);
+tagstruct.ImageDescription  = meta_json;
+t.setTag(tagstruct);
+t.write(uint16(snap.img));
+t.close();
 save(snapdatfile, 'snap', '-v7.3');
 Save_Snap_To_JS(app, snap.img, experimentName, ds);
 end

@@ -61,10 +61,10 @@ classdef AdditionalConfigData < handle
         % Set a value in the config file
         function set(obj, key, value)
             obj.data.(key) = value;
-            
-            % save the data
+
+            % save the data (-v7.3 required for classdef objects such as affinetform2d)
             data = obj.data;
-            save(obj.filePath, 'data');
+            save(obj.filePath, 'data', '-v7.3');
         end
     end
 end

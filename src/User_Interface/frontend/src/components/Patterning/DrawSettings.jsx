@@ -14,6 +14,7 @@ export const DrawSettings = ({
   undo,
   deviceType,
   deviceName,
+  cameraName = "",
   allModes,
   children,
 }) => {
@@ -23,6 +24,7 @@ export const DrawSettings = ({
         <PatterningImageSelector
           deviceType={deviceType}
           deviceName={deviceName}
+          cameraName={cameraName}
         />
         <Buttons allModes={allModes} clear={clear} />
         <UndoButton undo={undo} />
@@ -98,25 +100,18 @@ const ClearButton = ({ clear }) => (
   </PatterningSettingsButton>
 );
 
-const PatterningImageSelector = ({ deviceType, deviceName = [] }) => {
+const PatterningImageSelector = ({ deviceType, deviceName = [], cameraName = "" }) => {
   const { imgSelected, setImgSelected } = useDrawingControls();
 
-  // get list of images from server "imgs" folder
-  // let user pick one
   const setImgSelectedAndTellMatlab = (img) => {
     setImgSelected(img);
-    if (
-      img &&
-      // img doesn't begin with "default"
-      img.indexOf("default") !== 0
-    )
+    if (img && img.indexOf("default") !== 0)
       tellMatlabAboutImage(img, deviceType, deviceName);
   };
 
   const [imgs, setImgs] = useState([]);
 
   useEffect(() => {
-    // only set imgselected if there's been a change
     if (imgSelected == "" && imgs.length > 0) {
       setImgSelectedAndTellMatlab(imgs[0]);
     }
@@ -125,11 +120,8 @@ const PatterningImageSelector = ({ deviceType, deviceName = [] }) => {
   useEffect(() => {
     const getImgs = async () => {
       var imgs = await getListOfImages(false);
-      //console.log("Images in snaps dir:",imgs);
-      // If no images present, snap a new one and set
-      // it to be the active image.
       if (imgs.length < 1) {
-        snap({ folder: "temp", showDate: false });
+        snap({ folder: "temp", showDate: false, deviceName: cameraName || [] });
         imgs = await getListOfImages(false);
         if (imgs.length < 1) {
           imgs = await getListOfImages(true);

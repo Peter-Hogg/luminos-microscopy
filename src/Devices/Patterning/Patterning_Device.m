@@ -32,6 +32,8 @@ classdef (Abstract) Patterning_Device < Device
         roi_stack Patterning_ROI_Stack
         smoothing
         tform % transform from camera to patterning device. Should be affinetform2d object if Matlab >R2022b.
+        tforms struct % per-camera transforms: tforms.(cameraName) = affinetform2d
+        target_camera string % active camera name; must match a key in tforms
     end
     methods
         function obj = Patterning_Device(Initializer)
@@ -52,7 +54,7 @@ classdef (Abstract) Patterning_Device < Device
         % load data from initializer into object
         function Load_Inits(obj)
             initTform = obj.additionalConfigData.get("tform");
-            
+
             % set tform as identity
             if (isempty(initTform))
                 if isMATLABReleaseOlderThan("R2022b")
@@ -62,7 +64,7 @@ classdef (Abstract) Patterning_Device < Device
                 end
                 obj.additionalConfigData.set("tform", initTform);
             end
-            
+
             if isa(initTform, 'affine2d') %for backwards compatibility in old init files, convert to new premultiply convention
                 if isMATLABReleaseOlderThan("R2022b")
                 else
@@ -72,7 +74,23 @@ classdef (Abstract) Patterning_Device < Device
                 end
             end
             obj.tform = initTform;
-            
+
+            % load per-camera tforms
+            savedTforms = obj.additionalConfigData.get("tforms");
+            if isempty(savedTforms)
+                obj.tforms = struct();
+            else
+                obj.tforms = savedTforms;
+            end
+
+            % load target camera name
+            savedCamera = obj.additionalConfigData.get("target_camera");
+            if isempty(savedCamera)
+                obj.target_camera = "";
+            else
+                obj.target_camera = savedCamera;
+            end
+
             % grab other props from the initializer
             obj.frac_calpoints = obj.Initializer.frac_calpoints;
             obj.calPS = obj.Initializer.calPS;
@@ -129,21 +147,37 @@ classdef (Abstract) Patterning_Device < Device
             if isempty(obj)
                 error("Error: DMD is not found.");
             end
-            if ~isempty(obj.tform) && ~isempty(obj.refimage)
-                if isa(obj.tform, "affinetform2d") || isa(obj.tform, "projtform2d")
-                    transform_inv = invert(obj.tform);
+
+            % Select per-camera tform: explicit target_camera takes priority over refimage.name
+            active_tform = obj.tform;
+            if isstruct(obj.tforms)
+                if strlength(obj.target_camera) > 0
+                    camField = matlab.lang.makeValidName(obj.target_camera);
+                elseif ~isempty(obj.refimage) && ~isempty(obj.refimage.name)
+                    camField = matlab.lang.makeValidName(obj.refimage.name);
+                else
+                    camField = "";
+                end
+                if strlength(camField) > 0 && isfield(obj.tforms, camField)
+                    active_tform = obj.tforms.(camField);
+                end
+            end
+
+            if ~isempty(active_tform) && ~isempty(obj.refimage)
+                if isa(active_tform, "affinetform2d") || isa(active_tform, "projtform2d")
+                    transform_inv = invert(active_tform);
                     transform_inv.A(1,3) = transform_inv.A(1,3) - obj.refimage.ref2d.XWorldLimits(1);
                     transform_inv.A(2,3) = transform_inv.A(2,3) - obj.refimage.ref2d.YWorldLimits(1);
                     transform = invert(transform_inv);
-                elseif isa(obj.tform, "affine2d") || isa(obj.tform, "projective2d")
-                    transform_inv = invert(obj.tform);
+                elseif isa(active_tform, "affine2d") || isa(active_tform, "projective2d")
+                    transform_inv = invert(active_tform);
                     transform_inv.T(3,1) = transform_inv.T(3,1) - obj.refimage.ref2d.XWorldLimits(1);
                     transform_inv.T(3,2) = transform_inv.T(3,2) - obj.refimage.ref2d.YWorldLimits(1);
                     transform = invert(transform_inv);
                 else
                     % Polynomial is not invertible, so use shifted
                     % offset mask instead.
-                    transform = obj.tform;
+                    transform = active_tform;
                 end
             else
                 %disp("No ref tforms found. Return eye(3).");
@@ -335,13 +369,20 @@ classdef (Abstract) Patterning_Device < Device
                 title("Overlay");
 
                 obj.tform = t_est;
-                
+
                 if obj.debug_mode == 1
                     imagesc(obj.demo_ax(2), obj.Target);
                 end
-                
-                % Update the tform in the additional config data regardless of path
+
+                % Save tform globally and per-camera
                 obj.additionalConfigData.set("tform", obj.tform);
+                if ~isempty(obj.refimage) && ~isempty(obj.refimage.name)
+                    camField = matlab.lang.makeValidName(obj.refimage.name);
+                    obj.tforms.(camField) = obj.tform;
+                    obj.additionalConfigData.set("tforms", obj.tforms);
+                    obj.target_camera = obj.refimage.name;
+                    obj.additionalConfigData.set("target_camera", obj.target_camera);
+                end
                 success = 1;
             catch
                 %error("Calibration Failed: Try a thin sample with good focus.");
@@ -572,6 +613,15 @@ classdef (Abstract) Patterning_Device < Device
             obj.tform = finaltform_shifted;
             obj.Initializer.tform = finaltform_shifted;
             obj.additionalConfigData.set("tform", finaltform_shifted);
+
+            % Save per-camera tform
+            if ~isempty(obj.refimage) && ~isempty(obj.refimage.name)
+                camField = matlab.lang.makeValidName(obj.refimage.name);
+                obj.tforms.(camField) = finaltform_shifted;
+                obj.additionalConfigData.set("tforms", obj.tforms);
+                obj.target_camera = obj.refimage.name;
+                obj.additionalConfigData.set("target_camera", obj.target_camera);
+            end
             success = true;
         end
         

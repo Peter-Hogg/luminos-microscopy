@@ -5,9 +5,11 @@ import { useGlobalAppVariables } from "../../GlobalAppVariablesContext";
 import { useSnackbar } from "notistack";
 
 export const useSnapMode = ({
-  name = "snap", // change if you want to support multiple circle modes
+  name = "snap",
+  cameraName = "",
 }: {
   name?: string;
+  cameraName?: string;
 }) => {
   const { experimentName } = useGlobalAppVariables();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -17,7 +19,7 @@ export const useSnapMode = ({
       variant: "info",
       persist: true,
     });
-    snap({ folder: experimentName }).then((success) => {
+    snap({ folder: experimentName, deviceName: cameraName || [] }).then((success) => {
       closeSnackbar(key);
       if (!success) return;
       enqueueSnackbar("Saved snap to file", { variant: "success" });

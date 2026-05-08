@@ -29,6 +29,7 @@ export const useAdvancedCalibrateMode = ({
   name = "calibrate",
   deviceType,
   deviceName = [],
+  cameraName = "",
 } = {}) => {
   const [clickedPoints, setClickedPoints] = useState([]);
   const [isCalibrateMode, setIsCalibrateMode] = useState(false);
@@ -111,11 +112,12 @@ export const useAdvancedCalibrateMode = ({
       }
     );
 
+    const snapOptions = { folder: "temp", showDate: false, deviceName: cameraName || [] };
     if (isManual) {
       const success = await projectDMDManualCalPattern(1, deviceName);
       if (success) {
         const interval = setInterval(() => {
-          snap({ folder: "temp", showDate: false });
+          snap(snapOptions);
           getImageFolderPath().then((folderPath) => {
             setImgSelected(`${folderPath}/temp.png?${Date.now()}`);
             tellMatlabAboutImage(
@@ -129,7 +131,7 @@ export const useAdvancedCalibrateMode = ({
       }
     } else {
       await writeWhiteToDMD(deviceName)
-        .then(() => snap({ folder: "temp", showDate: false }))
+        .then(() => snap(snapOptions))
         .then(() => getImageFolderPath())
         .then((folderPath) =>
           tellMatlabAboutImage(`${folderPath}/temp.png`, deviceType, deviceName)
@@ -137,7 +139,7 @@ export const useAdvancedCalibrateMode = ({
         .then(() =>
           projectCalibrationPattern(deviceName, selectedPatternPoints.charAt(0))
         )
-        .then(() => snap({ folder: "temp", showDate: false }))
+        .then(() => snap(snapOptions))
         .then(() => getImageFolderPath())
         .then((folderPath) =>
           tellMatlabAboutImage(`${folderPath}/temp.png`, deviceType, deviceName)

@@ -1,7 +1,7 @@
 // matlab communicatinons for the dmd tab
 
 import { ComputerDesktopIcon } from "@heroicons/react/20/solid";
-import { matlabDeviceMethod, matlabAppMethod } from "./matlabHelpers";
+import { matlabDeviceMethod, matlabAppMethod, setProperty } from "./matlabHelpers";
 import { applyMask, calculateCalibrationTransform } from "./patterningComms";
 
 const dmdMethod = async (x) => {
@@ -216,6 +216,10 @@ export const Generate_Hadamard = async (
     devname: deviceName,
   });
   return success;
+};
+
+export const setDMDTargetCamera = async (cameraName, deviceName = []) => {
+  return setProperty("DMD", "target_camera", cameraName, deviceName || undefined);
 };
 
 export const getDMDs = async () => {

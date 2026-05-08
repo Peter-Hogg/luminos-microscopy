@@ -12,12 +12,11 @@ const imgServerURL = "http://localhost:3011";
 
 export const imgSrc = (imgName) => `${imgServerURL}/${imgName}`;
 
-export const DrawROIs = ({ deviceType, deviceName, allModes, ...props }) => {
+export const DrawROIs = ({ deviceType, deviceName, cameraName = "", allModes, ...props }) => {
   const { setMode, lastMode, popLastMode, clearLastMode } =
     useDrawingControls();
 
   const undo = () => {
-    // undo last shape drawn
     if (lastMode) {
       allModes.find((mode) => mode.name === lastMode).undo?.();
       popLastMode();
@@ -25,9 +24,7 @@ export const DrawROIs = ({ deviceType, deviceName, allModes, ...props }) => {
   };
 
   const clear = (resetMode = true) => {
-    // clear all shapes drawn
     allModes.forEach((mode) => mode.clear?.());
-
     if (resetMode) {
       setMode("");
     }
@@ -35,14 +32,13 @@ export const DrawROIs = ({ deviceType, deviceName, allModes, ...props }) => {
   };
 
   const handleEsc = () => {
-    // If the user presses the escape key, clear the current shape
     allModes.forEach((mode) => mode.clearCurrent?.());
     setMode("");
   };
 
   // add default modes
   const zoomMode = useZoomMode();
-  const snapMode = useSnapMode({ snap: () => console.log("hi") });
+  const snapMode = useSnapMode({ cameraName });
   allModes = [snapMode, ...allModes, zoomMode];
 
   return (
@@ -52,6 +48,7 @@ export const DrawROIs = ({ deviceType, deviceName, allModes, ...props }) => {
         undo={undo}
         deviceType={deviceType}
         deviceName={deviceName}
+        cameraName={cameraName}
         allModes={allModes}
       >
         <ROIDrawer handleEsc={handleEsc} allModes={allModes} {...props} />
