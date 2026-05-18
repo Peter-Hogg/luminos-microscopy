@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import SLM from "../tabs/SLM/SLM";
 import SpinningDisk from "../tabs/SpinningDisk";
 import AdvancedImaging from "../tabs/AdvancedImaging/AdvancedImaging";
+import CameraZStack from "../tabs/CameraZStack";
 import { getTabs } from "../matlabComms/miscellaneousComms";
 
 export const useTabs = () => {
@@ -20,6 +21,7 @@ export const useTabs = () => {
     SLM,
     SpinningDisk,
     AdvancedImaging,
+    CameraZStack,
   };
 
   // tabs that are in use (e.g. if DMD is not in use, don't show the DMD tab)
